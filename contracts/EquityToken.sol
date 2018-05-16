@@ -6,30 +6,31 @@ contract EquityToken{
     address[] members;
     uint256 totalSupply_;
 
-    address administrator;
+    address public administrator;
     mapping(address =>uint256) candidateVotes;
     mapping(address =>address) candidateSupport;
 
-    uint256 dividend;
-    uint256 dividendPeriod;
-    uint256 lastDividend;
+    uint256 public dividend;
+    uint256 public dividendPeriod;
+    uint256 public lastDividend;
     mapping(uint256 =>uint256) dividendVotes;
     mapping(address =>uint256) dividendSupport;
 
-    uint256 budget;
-    uint256 budgetPeriod;
-    uint256 lastBudget;
+    uint256 public budget;
+    uint256 public budgetPeriod;
+    uint256 public lastBudget;
     mapping(uint256 =>uint256) budgetVotes;
     mapping(address =>uint256) budgetSupport;
 
-    uint256 quorum;
+    uint256 public quorum;
 
-    uint256 windDownVotes;
+    uint256 public windDownVotes;
 
-    event Transfer(address indexed from, address indexed to, uint tokens);
-    event AdminElected(address newAdmin, uint votes);
-    event DividendDistributed(uint dividend);
-    event BudgetDistributed(address target,uint budget);
+    event Transfer(address indexed from, address indexed to, uint256 tokens);
+    event AdminElected(address newAdmin, uint256 votes);
+    event DividendDistributed(uint256 dividend);
+    event BudgetDistributed(address target,uint256 budget);
+    event Log(uint256 share, uint256 balance);
 
     constructor(uint256 initSupply, uint256 _quorum, uint256 _dividendPeriod,
     uint256 _budgetPeriod) public{
@@ -37,6 +38,14 @@ contract EquityToken{
         quorum = _quorum;
         administrator = msg.sender;
         tokenBalances[administrator] = totalSupply_;
+        members.push(administrator);
+        /*to initialize elections must put sole ownership support behind defaults**/
+        candidateSupport[administrator] = administrator;
+        candidateVotes[administrator] = tokenBalances[administrator];
+        dividendSupport[administrator] = 0;
+        dividendVotes[0] = tokenBalances[administrator];
+        budgetSupport[administrator] = 0;
+        budgetVotes[0] = tokenBalances[administrator];
         lastDividend = now;
         lastBudget = now;
         dividendPeriod = _dividendPeriod;
@@ -100,6 +109,11 @@ contract EquityToken{
             members.push(_to);
         }
         /**May also want to remove msg.sender if tokenBalances[msg.sender]<=0*/
+        /**Preferences of msg.sender automatically transfer to _to**/
+        dividendSupport[_to] = dividendSupport[msg.sender];
+        budgetSupport[_to] = budgetSupport[msg.sender];
+        candidateSupport[_to] = candidateSupport[msg.sender];
+
         emit Transfer(msg.sender, _to, _value);
         return true;
     }
@@ -109,23 +123,24 @@ contract EquityToken{
     }
 
     function electDividend(uint256 _dividend) public returns (bool){
-        uint256 currentSupport = dividendSupport[msg.sender];
-        dividendVotes[currentSupport] = sub(dividendVotes[currentSupport],tokenBalances[msg.sender]);
-        dividendSupport[msg.sender] = _dividend;
-        dividendVotes[_dividend] = add(dividendVotes[_dividend],tokenBalances[msg.sender]);
-        if(dividendVotes[_dividend]>quorum){
-            dividend = dividendVotes[_dividend];
-        }
-        return true;
+      uint256 currentSupport = dividendSupport[msg.sender];
+      dividendVotes[currentSupport] = sub(dividendVotes[currentSupport],tokenBalances[msg.sender]);
+      dividendSupport[msg.sender] = _dividend;
+      dividendVotes[_dividend] = add(dividendVotes[_dividend],tokenBalances[msg.sender]);
+      if(dividendVotes[_dividend]>quorum){
+          dividend = _dividend;
+      }
+      return true;
     }
 
     function distributeDividend() public onlyAdmin returns (bool){
-        require(dividend< address(this).balance);
+        require(dividend < address(this).balance);
         require(now > add(lastDividend,dividendPeriod));
         lastDividend = now;
         for(uint i =0;i<members.length;i++){
             uint256 share = calcShare(tokenBalances[members[i]],dividend);
             ethBalances[members[i]] = add(ethBalances[members[i]],share);
+            emit Log(share,ethBalances[members[i]]);
         }
         emit DividendDistributed(dividend);
         dividend = 0;
@@ -188,4 +203,6 @@ contract EquityToken{
         return true;
     }
 
+    function () external payable{
+    }
 }
