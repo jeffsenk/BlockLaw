@@ -30,7 +30,6 @@ contract EquityToken{
     event AdminElected(address newAdmin, uint256 votes);
     event DividendDistributed(uint256 dividend);
     event BudgetDistributed(address target,uint256 budget);
-    event Log(uint256 share, uint256 balance);
 
     constructor(uint256 initSupply, uint256 _quorum, uint256 _dividendPeriod,
     uint256 _budgetPeriod) public{
@@ -140,7 +139,6 @@ contract EquityToken{
         for(uint i =0;i<members.length;i++){
             uint256 share = calcShare(tokenBalances[members[i]],dividend);
             ethBalances[members[i]] = add(ethBalances[members[i]],share);
-            emit Log(share,ethBalances[members[i]]);
         }
         emit DividendDistributed(dividend);
         dividend = 0;
