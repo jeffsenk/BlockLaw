@@ -3,7 +3,7 @@ contract('EquityToken', accounts =>{
   let token;
   const owner = accounts[0];
   const operations = accounts[1];
-  const initSupply = 100;
+  const initSupply = 1000;
   const quorum = 51;
   const dividendPeriod = 0;
   const budgetPeriod = 0;
